@@ -4,16 +4,22 @@ using UnityEngine;
 
 public class PlayerMove : MonoBehaviour
 {
-
+    private Rigidbody2D playerRB;
     public float movespeed;
     public float jumpforce;
-
-        
-    private Rigidbody2D playerRB;
+    
+    public Transform groundcheck;
+    public Transform ceilingcheck;
+    public LayerMask groundobjects;
+    public Vector2 checkboxsize = new Vector2(0.5f, 0.1f);
+    public int maxjumpcount = 2;
 
     private bool isFacingRight = true;
     private float moveDirection;
-    private bool isjumping = false;
+    private bool rdyjump = false;
+    private bool onjumping = false;
+    private bool isGrounded=false;
+    private int jumpcount=2;
 
     private void Awake()
     {
@@ -36,10 +42,15 @@ public class PlayerMove : MonoBehaviour
         ChangeDirection();
 
 
+
     }
 
     private void FixedUpdate()
     {
+        JumpingCheck();
+
+        BoarderCheck();
+
         //todo move
         Move();
     }
@@ -47,19 +58,20 @@ public class PlayerMove : MonoBehaviour
     private void Inputs()
     {
         moveDirection = Input.GetAxis("Horizontal");//-1~1
-        if (Input.GetButtonDown("Jump"))
+        if (Input.GetButtonDown("Jump") && jumpcount<2)
         {
-            isjumping = true;
+            rdyjump = true;
         }
     }
 
     private void Move()
     {
         playerRB.velocity = new Vector2(moveDirection * movespeed, playerRB.velocity.y);
-        if (isjumping)
+        if (rdyjump)
         {
             playerRB.AddForce(new Vector2(0, jumpforce));
-            isjumping = false;
+            jumpcount++;
+            rdyjump = false;
         }
     }
 
@@ -82,6 +94,31 @@ public class PlayerMove : MonoBehaviour
         transform.Rotate(0, 180f, 0);
     }
 
+    private void BoarderCheck()
+    {
+        isGrounded = Physics2D.OverlapBox(groundcheck.position, checkboxsize ,groundobjects);
+        if (isGrounded&& !onjumping)//检测位置完全处于本地下方才能生效，起跳的时候容易还是检测到贴合地面导致连续重置，增加判定是否已经处于Y轴移动中，规避连跳上限++
+        {
+            jumpcount = 0;
+        }
+    }
 
+    private void JumpingCheck()
+    {
+        if (playerRB.velocity.y != 0)
+        {
+            onjumping = true;
+        }
+        else
+        {
+            onjumping = false;
+        }
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireCube(groundcheck.position , new Vector3(checkboxsize.x, checkboxsize.y)*2);
+    }
 
 }
